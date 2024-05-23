@@ -9,16 +9,39 @@ use Yajra\DataTables\DataTables;
 
 class NewsController extends Controller
 {
-    public function getNews()
+    public function getNews(Request $request)
     {
+        $source = $request->input('source');
+        $publishedAt = $request->input('publishedAt');
+        $author = $request->input('author');
+        
         $apiKey = '267dd5c7b58f487e8452a748b5732510';
-        $url = "https://newsapi.org/v2/everything?q=tesla&from=2024-04-21&sortBy=publishedAt&apiKey=" . $apiKey;
+        $url = "https://newsapi.org/v2/everything?";
+
+        if (!empty($author)) {
+            $search = "q=$author";
+        } else {
+            $search = "q=tesla";
+        }
+        $url .= $search;
+        if (!empty($source)) {
+            $url .= "&sources=$source";
+        }
+        if (!empty($publishedAt)) {
+            $url .= "&from=$publishedAt";
+        }
+
+        $url .= "&apiKey=" . $apiKey;
         $response = Http::get($url);
-        $articles = $response->json()['articles'];
         if ($response->successful()) {
+
+        $articles = $response->json()['articles'];
             return DataTables::of($articles)
             ->addColumn('action', function ($article) {
                 return '';
+            })
+            ->addColumn('source', function ($article) {
+                return $article['source']['name'];
             })
             ->make(true);
         } else {
@@ -32,6 +55,14 @@ class NewsController extends Controller
     }
 
     function index(){
-        return view('news.index');
+        $apiKey = '267dd5c7b58f487e8452a748b5732510';
+        $url = "https://newsapi.org/v2/everything?q=tesla&apiKey=" . $apiKey;
+        $response = Http::get($url);
+        if ($response->successful()) {
+            $errorMessage = '';
+        } else {
+            $errorMessage = "Error fetching articles: " . $response->status() . " - " . $response->json()['message'];
+        }
+        return view('news.index', compact('errorMessage'));
     }
 }
